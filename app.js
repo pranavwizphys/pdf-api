@@ -1,8 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const pdf = require('html-pdf');
+const puppeteer = require('puppeteer');
 const AWS = require('aws-sdk');
-const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 8888;
@@ -19,8 +18,6 @@ const s3 = new AWS.S3();
 // Middleware to parse JSON in request body
 app.use(cors());
 app.use(express.json());
-// Serve static files from the 'images' directory
-app.use('/images', express.static('images'));
 
 // API route to generate PDF from HTML content
 app.post('/generate-pdf', async (req, res) => {
@@ -28,9 +25,6 @@ app.post('/generate-pdf', async (req, res) => {
   // Extract data from request body
   const { patients, date, doctorName } = req.body;
 
-  // const imagePath = await import(`./images/wiziologo.png`);
-  // console.log("image path ", imagePath);
-  // const logo = imagePath.default;
   // Construct HTML content dynamically
   let htmlContent = `
     <html>
@@ -112,17 +106,17 @@ app.post('/generate-pdf', async (req, res) => {
       </body>
     </html>`;
 
-  // Create PDF options
-  const pdfOptions = { format: 'A4' }; // You can adjust the format as needed
-
   try {
-    // Convert HTML to PDF
-    const buffer = await new Promise((resolve, reject) => {
-      pdf.create(htmlContent, pdfOptions).toBuffer((err, buffer) => {
-        if (err) reject(err);
-        else resolve(buffer);
-      });
-    });
+    // Launch a headless browser
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+
+    // Set content and generate PDF
+    await page.setContent(htmlContent);
+    const buffer = await page.pdf({ format: 'A4' });
+
+    // Close the browser
+    await browser.close();
 
     // Combine doctorName and date for the PDF file name
     const fileName = `${doctorName}_${date.replace(/-/g, '')}`;
