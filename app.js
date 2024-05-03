@@ -33,36 +33,48 @@ app.post('/generate-pdf', async (req, res) => {
     // Set font and font size
     // const font = await pdfDoc.embedFont(PDFDocument.Font.Helvetica);
     // page.setFont(font);
-    page.setFontSize(10);
+    // page.setFontSize(14);
+    
+    // Add Wizio text
+    page.drawText('Wizio', { x: 500, y: 750, size: 20 });
 
     // Add text content
-    page.drawText(`Doctor: ${doctorName}`, { x: 10, y: 750 });
-    page.drawText(`Date: ${date}`, { x: 10, y: 730 });
-    page.drawText(`Total Patients: ${patients.length}`, { x: 10, y: 710 });
-    page.drawText('Patient Details:', { x: 10, y: 680 });
+    page.drawText(`Doctor: ${doctorName}`, { x: 10, y: 720, size: 10 });
+    page.drawText(`Date: ${date}`, { x: 10, y: 700, size: 10 });
+    page.drawText(`Total Patients: ${patients.length}`, { x: 10, y: 680, size: 10 });
+    // page.drawText('Patient Details:', { x: 10, y: 660, size: 10 });
 
     // Add table headers
-    page.drawText('No', { x: 10, y: 660 });
-    page.drawText('Name', { x: 60, y: 660 });
-    page.drawText('Contact', { x: 150, y: 660 });
-    page.drawText('Time', { x: 230, y: 660 });
-    page.drawText('Duration', { x: 310, y: 660 });
-    page.drawText('Appointment', { x: 400, y: 660 });
-    page.drawText('Remarks', { x: 490, y: 660 });
+    page.drawText('No', { x: 10, y: 620, size: 10 });
+    page.drawText('Name', { x: 60, y: 620, size: 10 });
+    page.drawText('Contact', { x: 150, y: 620, size: 10 });
+    page.drawText('Time', { x: 230, y: 620, size: 10 });
+    page.drawText('Duration', { x: 310, y: 620, size: 10 });
+    page.drawText('Appointment', { x: 400, y: 620, size: 10 });
+    page.drawText('Remarks', { x: 490, y: 620, size: 10 });
+    page.drawLine({start: { x: 10, y: 614 }, end: { x: 580, y: 614 }, thickness: 0.001});
 
     // Add patient details to the table
-    let yOffset = 640;
+    let yOffset = 600;
+    let alternateColor = true;
     patients.forEach((patient, index) => {
-      page.drawText(`${index + 1}`, { x: 10, y: yOffset });
-      page.drawText(`${patient.patientName}`, { x: 60, y: yOffset });
-      page.drawText(`${patient.patientNumber}`, { x: 150, y: yOffset });
-      page.drawText(`${patient.appointmentStartTime}`, { x: 230, y: yOffset });
-      page.drawText(`${patient.slotDuration} minutes`, { x: 310, y: yOffset });
-      page.drawText(`${patient.appointmentType}`, { x: 400, y: yOffset });
-      page.drawText('', { x: 490, y: yOffset }); // Add remarks, if available
+      if (alternateColor) {
+        // page.setFillColor(rgb(0.8, 0.8, 0.8));
+        // page.fillRect(10, yOffset - 20, 540, 20);
+      }
+      page.drawText(`${index + 1}`, { x: 10, y: yOffset, size: 10 });
+      page.drawText(`${patient.patientName}`, { x: 60, y: yOffset, size: 10 });
+      page.drawText(`${patient.patientNumber}`, { x: 150, y: yOffset, size: 10 });
+      page.drawText(`${patient.appointmentStartTime}`, { x: 230, y: yOffset, size: 10 });
+      page.drawText(`${patient.slotDuration} minutes`, { x: 310, y: yOffset, size: 10 });
+      page.drawText(`${patient.appointmentType}`, { x: 400, y: yOffset, size: 10 });
+      page.drawText('', { x: 490, y: yOffset, size: 10 }); // Add remarks, if available
+      // page.drawLine({start: { x: 10, y: 640 }, end: { x: 550, y: 640 }});
 
       yOffset -= 20;
+      alternateColor = !alternateColor;
     });
+    
     const options = { scale: 0.1 }; // Adjust the scale as needed (0.5 means 50% smaller)
 
     const pdfBytes = await pdfDoc.save({ options });
