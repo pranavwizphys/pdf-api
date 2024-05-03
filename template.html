@@ -1,0 +1,84 @@
+<!-- template.html -->
+<html>
+  <style>
+    /* Table styling */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 15px;
+      overflow: hidden;
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border: 1px solid #ddd;
+    }
+    th {
+      /* background-color: #f2f2f2; */
+    }
+    tr:nth-child(even) {
+      background-color: #EFF1FF;
+    }
+    /* Radius only on the outer border */
+    table tr:first-child th:first-child {
+      border-top-left-radius: 15px;
+    }
+    table tr:first-child th:last-child {
+      border-top-right-radius: 15px;
+    }
+    table tr:last-child td:first-child {
+      border-bottom-left-radius: 15px;
+    }
+    table tr:last-child td:last-child {
+      border-bottom-right-radius: 15px;
+    }
+
+    /* New CSS for flex layout */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo {
+      height: 60px;
+    }
+    .title {
+      font-size: 35px;
+      margin-top: 10px;
+    }
+  </style>
+  <body style="font-family: Calibri; padding: 5%;">
+    <div class="header">
+      <div>
+        <img src="./images/wiziologo.png" class="logo">
+      </div>
+      <div class="title">Wizio</div>
+    </div>
+    <div style="font-size: 20px; padding-top: 3%;">
+      <span>${doctorName}</span>
+      <br>
+      <span>Date: ${date}</span>
+    </div>
+    <div style="font-size: 20px;">
+      <span>Total Patients : ${patients.length}</span>
+    </div>
+    <br><br>
+    <table>
+      <thead>
+        <tr>
+          <th>No</th>
+          <th>Name</th>
+          <th>Contact</th>
+          <th>Time</th>
+          <th>Duration</th>
+          <th>Appointment</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Table rows will be populated dynamically -->
+      </tbody>
+    </table>
+  </body>
+</html>
