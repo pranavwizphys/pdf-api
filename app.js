@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const puppeteer = require('puppeteer');
+const { PDFDocument, rgb } = require('pdf-lib');
 const AWS = require('aws-sdk');
 
 const app = express();
@@ -19,104 +19,56 @@ const s3 = new AWS.S3();
 app.use(cors());
 app.use(express.json());
 
-// API route to generate PDF from HTML content
+// API route to generate PDF from data
 app.post('/generate-pdf', async (req, res) => {
   console.log("request body ", req.body);
   // Extract data from request body
   const { patients, date, doctorName } = req.body;
 
-  // Construct HTML content dynamically
-  let htmlContent = `
-    <html>
-      <style>
-        /* Table styling */
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          border-radius: 15px;
-          overflow: hidden;
-          border: 1px solid #ddd;
-        }
-        th, td {
-          padding: 12px 15px;
-          text-align: left;
-          border: 1px solid #ddd;
-        }
-        th {
-          /* background-color: #f2f2f2; */
-        }
-        tr:nth-child(even) {
-          background-color: #EFF1FF;
-        }
-        /* Radius only on the outer border */
-        table tr:first-child th:first-child {
-          border-top-left-radius: 15px;
-        }
-        table tr:first-child th:last-child {
-          border-top-right-radius: 15px;
-        }
-        table tr:last-child td:first-child {
-          border-bottom-left-radius: 15px;
-        }
-        table tr:last-child td:last-child {
-          border-bottom-right-radius: 15px;
-        }
-      </style>
-      <body style="font-family: Calibri; padding: 5%;">
-        <div style="font-alingment: right;">
-          <div style="font-size: 35px; margin-top: 10px;">Wizio</div>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding-top: 3%; font-size: 20px;">
-          <div>${doctorName} <br>Date: ${date}</div>
-          <div>Total Patients : ${patients.length}</div>
-        </div>
-        <br><br>
-        <table>
-          <thead>
-            <tr>
-              <th>No</th>
-              <th>Name</th>
-              <th>Contact</th>
-              <th>Time</th>
-              <th>Duration</th>
-              <th>Appointment</th>
-              <th>Remarks</th>
-            </tr>
-          </thead>
-          <tbody>`;
-
-  // Populate table rows with patient data
-  patients.forEach((patient, index) => {
-    htmlContent += `
-            <tr>
-              <td>${index + 1}</td>
-              <td>${patient.patientName}</td>
-              <td>${patient.patientNumber}</td>
-              <td>${patient.appointmentStartTime}</td>
-              <td>${patient.slotDuration} minutes</td>
-              <td>${patient.appointmentType}</td>
-              <td></td>
-            </tr>`;
-  });
-
-  // Close HTML tags
-  htmlContent += `
-          </tbody>
-        </table>
-      </body>
-    </html>`;
-
   try {
-    // Launch a headless browser
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
+    // Create new PDF document
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage();
 
-    // Set content and generate PDF
-    await page.setContent(htmlContent);
-    const buffer = await page.pdf({ format: 'A4' });
+    // Set font and font size
+    // const font = await pdfDoc.embedFont(PDFDocument.Font.Helvetica);
+    // page.setFont(font);
+    page.setFontSize(10);
 
-    // Close the browser
-    await browser.close();
+    // Add text content
+    page.drawText(`Doctor: ${doctorName}`, { x: 10, y: 750 });
+    page.drawText(`Date: ${date}`, { x: 10, y: 730 });
+    page.drawText(`Total Patients: ${patients.length}`, { x: 10, y: 710 });
+    page.drawText('Patient Details:', { x: 10, y: 680 });
+
+    // Add table headers
+    page.drawText('No', { x: 10, y: 660 });
+    page.drawText('Name', { x: 60, y: 660 });
+    page.drawText('Contact', { x: 150, y: 660 });
+    page.drawText('Time', { x: 230, y: 660 });
+    page.drawText('Duration', { x: 310, y: 660 });
+    page.drawText('Appointment', { x: 400, y: 660 });
+    page.drawText('Remarks', { x: 490, y: 660 });
+
+    // Add patient details to the table
+    let yOffset = 640;
+    patients.forEach((patient, index) => {
+      page.drawText(`${index + 1}`, { x: 10, y: yOffset });
+      page.drawText(`${patient.patientName}`, { x: 60, y: yOffset });
+      page.drawText(`${patient.patientNumber}`, { x: 150, y: yOffset });
+      page.drawText(`${patient.appointmentStartTime}`, { x: 230, y: yOffset });
+      page.drawText(`${patient.slotDuration} minutes`, { x: 310, y: yOffset });
+      page.drawText(`${patient.appointmentType}`, { x: 400, y: yOffset });
+      page.drawText('', { x: 490, y: yOffset }); // Add remarks, if available
+
+      yOffset -= 20;
+    });
+    const options = { scale: 0.1 }; // Adjust the scale as needed (0.5 means 50% smaller)
+
+    const pdfBytes = await pdfDoc.save({ options });
+    
+    // Serialize the PDF document
+    // const pdfBytes = await pdfDoc.save();
 
     // Combine doctorName and date for the PDF file name
     const fileName = `${doctorName}_${date.replace(/-/g, '')}`;
@@ -128,7 +80,7 @@ app.post('/generate-pdf', async (req, res) => {
     const uploadParams = {
       Bucket: 'wizio-pdf',
       Key: key, // Unique key for the PDF file
-      Body: buffer,
+      Body: pdfBytes,
       ContentType: 'application/pdf'
     };
     const uploadResult = await s3.upload(uploadParams).promise();
@@ -150,7 +102,6 @@ app.post('/generate-pdf', async (req, res) => {
     return res.status(500).json({ error: 'Failed to generate PDF' });
   }
 });
-
 
 // Route to show that API is running
 app.get('/', (req, res) => {
