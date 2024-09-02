@@ -124,3 +124,75 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+
+
+// API route to generate PDF from the provided program data
+app.post('/generate-program-pdf', async (req, res) => {
+  console.log("request body ", req.body);
+  // Extract program data from request body
+  const programs = req.body;
+
+  try {
+    // Create new PDF document
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage();
+
+    // Set font and font size
+    const font = await pdfDoc.embedFont(PDFDocument.Font.Helvetica);
+    page.setFont(font);
+    page.setFontSize(14);
+
+    // Add Wizio text
+    page.drawText('Wizio', { x: 500, y: 750, size: 20 });
+
+    // Add table headers
+    page.drawText('Code', { x: 10, y: 720, size: 12 });
+    page.drawText('Name', { x: 100, y: 720, size: 12 });
+    page.drawLine({ start: { x: 10, y: 710 }, end: { x: 580, y: 710 }, thickness: 0.001 });
+
+    // Add program details to the table
+    let yOffset = 690;
+    programs.forEach((program) => {
+      page.drawText(`${program.code}`, { x: 10, y: yOffset, size: 10 });
+      page.drawText(`${program.name}`, { x: 100, y: yOffset, size: 10 });
+
+      yOffset -= 20;
+    });
+
+    const options = { scale: 0.1 }; // Adjust the scale as needed
+
+    const pdfBytes = await pdfDoc.save({ options });
+
+    // Combine a timestamp for the PDF file name
+    const fileName = `programs_${Date.now()}`;
+
+    // Generate the key for the PDF file
+    const key = `program_pdf/${fileName}.pdf`;
+
+    // Upload the PDF buffer to S3 bucket
+    const uploadParams = {
+      Bucket: 'wizio-pdf',
+      Key: key, // Unique key for the PDF file
+      Body: pdfBytes,
+      ContentType: 'application/pdf'
+    };
+    const uploadResult = await s3.upload(uploadParams).promise();
+    console.log("this is upload result ", uploadResult);
+
+    // Generate presigned URL for viewing the PDF
+    const urlParams = {
+      Bucket: 'wizio-pdf',
+      Key: uploadParams.Key,
+      Expires: 60 * 60 * 24 // URL expires in 24 hours
+    };
+    const presignedUrl = await s3.getSignedUrl('getObject', urlParams);
+    console.log("this is url ", presignedUrl);
+
+    // Send the presigned URL as response
+    return res.json({ url: presignedUrl });
+  } catch (error) {
+    console.error('Error generating PDF or uploading to S3:', error);
+    return res.status(500).json({ error: 'Failed to generate PDF' });
+  }
+});
